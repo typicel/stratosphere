@@ -1,0 +1,18 @@
+[package]
+edition = "2021"
+name = "rust-bluesky-client"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.72"
+async-trait = "0.1.68"
+atrium-api = "0.4.0"
+atrium-xrpc = "0.3.0"
+chrono = "0.4.26"
+http = "0.2.9"
+jwt = "0.16.0"
+reqwest = "0.11.18"
+serde = "1.0.183"
+tokio = {version = "1.28.2", features = ["macros", "rt", "rt-multi-thread"]}
