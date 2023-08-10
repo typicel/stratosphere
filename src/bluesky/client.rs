@@ -1,4 +1,4 @@
-use crate::session::StratosphereSession;
+use super::session::StratosphereSession;
 use anyhow::Result;
 use async_trait::async_trait;
 use atrium_api::com::atproto::server::create_session::Input as CreateSessionInput;

@@ -1,8 +1,7 @@
-mod client;
-mod session;
+mod bluesky;
 
 use anyhow::{Context, Result};
-use client::StratosphereApp;
+use bluesky::StratosphereApp;
 
 #[tokio::main]
 async fn main() -> Result<()> {
