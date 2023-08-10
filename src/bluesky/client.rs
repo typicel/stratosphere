@@ -6,6 +6,8 @@ use atrium_api::{
     app::bsky::actor::get_profile::Parameters as GetProfileParams, client::AtpServiceClient,
 };
 use atrium_xrpc::client::reqwest::ReqwestClient;
+use core::fmt;
+use std::fmt::Formatter;
 use std::sync::{Arc, Mutex};
 
 struct StratosphereXrpc {
@@ -16,6 +18,21 @@ struct StratosphereXrpc {
 pub struct StratosphereApp {
     client: Arc<AtpServiceClient<StratosphereXrpc>>,
     xrpc: Arc<StratosphereXrpc>,
+}
+
+impl fmt::Debug for StratosphereApp {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StratosphereApp").finish()
+    }
+}
+
+impl Clone for StratosphereApp {
+    fn clone(&self) -> Self {
+        Self {
+            client: self.client.clone(),
+            xrpc: self.xrpc.clone(),
+        }
+    }
 }
 
 impl StratosphereApp {
