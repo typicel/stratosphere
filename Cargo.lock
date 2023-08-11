@@ -2636,6 +2636,7 @@ dependencies = [
  "dioxus-desktop",
  "http",
  "jwt",
+ "log",
  "reqwest",
  "serde",
  "tokio",
