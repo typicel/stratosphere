@@ -9,6 +9,7 @@ pub struct StratosphereSession {
     pub access_jwt: String,
     pub access_jwt_exp: DateTime<Utc>,
     pub refresh_jwt: String,
+    pub did: String,
 }
 
 #[derive(Deserialize)]
@@ -35,6 +36,7 @@ impl TryInto<StratosphereSession> for CreateSessionOutput {
             access_jwt: self.access_jwt,
             access_jwt_exp,
             refresh_jwt: self.refresh_jwt,
+            did: self.did,
         })
     }
 }
@@ -48,6 +50,7 @@ impl TryInto<StratosphereSession> for RefreshSessionOutput {
             access_jwt: self.access_jwt,
             access_jwt_exp,
             refresh_jwt: self.refresh_jwt,
+            did: self.did,
         })
     }
 }

@@ -1,11 +1,14 @@
+use super::command::*;
 use super::session::StratosphereSession;
 use anyhow::Result;
 use async_trait::async_trait;
 use atrium_api::com::atproto::server::create_session::Input as CreateSessionInput;
+use atrium_api::records::Record;
 use atrium_api::{
     app::bsky::actor::get_profile::Parameters as GetProfileParams, client::AtpServiceClient,
 };
 use atrium_xrpc::client::reqwest::ReqwestClient;
+use chrono::Utc;
 use std::sync::{Arc, Mutex};
 
 struct StratosphereXrpc {
@@ -16,6 +19,11 @@ struct StratosphereXrpc {
 pub struct StratosphereApp {
     client: Arc<AtpServiceClient<StratosphereXrpc>>,
     xrpc: Arc<StratosphereXrpc>,
+}
+
+#[derive(Debug)]
+struct CreateRecordPostArgs {
+    text: String,
 }
 
 impl StratosphereApp {
@@ -59,6 +67,51 @@ impl StratosphereApp {
 
         Ok(())
     }
+
+    pub async fn handle_command(&self, command: Command) -> Result<()> {
+        match command {
+            Command::CreateRecord(record) => {
+                use atrium_api::com::atproto::repo::create_record::Input;
+
+                let input = match record {
+                    CreateRecordCommand::Post(args) => {
+                        use atrium_api::app::bsky::feed::post::{
+                            Record as PostRecord, RecordEmbedEnum, ReplyRef,
+                        };
+
+                        let text = args.text;
+
+                        Input {
+                            collection: String::from("app.bsky.feed.post"),
+                            record: Record::AppBskyFeedPost(Box::new(PostRecord {
+                                created_at: Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string(),
+                                embed: None,
+                                entities: None,
+                                facets: None,
+                                reply: None,
+                                text: text,
+                                langs: None,
+                            })),
+                            // get session did from
+                            repo: self.xrpc.session.lock().unwrap().did.clone(),
+                            rkey: None,
+                            swap_commit: None,
+                            validate: None,
+                        }
+                    }
+                };
+
+                let record = self.client.com.atproto.repo.create_record(input).await?;
+                println!("Record: {:?}", record);
+            }
+
+            _ => {}
+        }
+
+        Ok(())
+    }
+
+    // pub async fn submit_post(&self, args: CreateRecordPostArgs) -> Result<()> {}
 }
 
 #[async_trait]

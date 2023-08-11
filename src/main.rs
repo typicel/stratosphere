@@ -2,6 +2,7 @@
 
 mod bluesky;
 
+use crate::bluesky::{Command, CreateRecordCommand, CreateRecordPostArgs};
 use anyhow::Result;
 use bluesky::StratosphereApp;
 
@@ -32,6 +33,8 @@ fn App(cx: Scope) -> Element {
     let password_input = use_state(cx, || "".to_string());
     let client = use_state(cx, || Option::<StratosphereApp>::None);
 
+    let post_input = use_state(cx, || "".to_string());
+
     let handle_login = move |_| {
         cx.spawn({
             let username_input = username_input.to_owned();
@@ -59,16 +62,54 @@ fn App(cx: Scope) -> Element {
         });
     };
 
+    let submit_post = move |_| {
+        cx.spawn({
+            let client = client.to_owned();
+            let text = post_input.to_owned();
+
+            async move {
+                if let Some(_client) = client.get() {
+                    let command =
+                        Command::CreateRecord(CreateRecordCommand::Post(CreateRecordPostArgs {
+                            text: text.get().clone(),
+                        }));
+
+                    let resp = _client.handle_command(command).await;
+
+                    match resp {
+                        Ok(_resp) => {
+                            println!("Posted!");
+                            ()
+                        }
+
+                        Err(_err) => {
+                            log::error!("Failed to post: {:?}", _err);
+                            ()
+                        }
+                    }
+                }
+            }
+        })
+    };
+
     cx.render(rsx! {
         div {
-            h1 {"Hey guys!"}
-
             if let Some(client) = client.get() {
                 rsx!(
-                    h1 { "Logged in!" }
+                    form {
+                        onsubmit: submit_post,
+                        input {
+                            value: "{post_input}",
+                            oninput: move |e| post_input.set(e.value.clone()),
+                        }
+                        input {
+                            r#type: "submit",
+                        }
+                    }
                 )
             } else {
                 rsx!(
+                    h1{ "Login to Bluesky" }
                     form {
                         onsubmit: handle_login,
                         input {
@@ -87,10 +128,4 @@ fn App(cx: Scope) -> Element {
             }
         }
     })
-}
-
-fn LoggedInComponent(cx: Scope) -> Element {
-    render! {
-        "Logged in!"
-    }
 }
