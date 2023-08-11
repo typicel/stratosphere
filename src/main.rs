@@ -15,15 +15,8 @@ async fn main() -> Result<()> {
 }
 
 async fn login_to_bluesky(username: String, password: String) -> Result<StratosphereApp> {
-    // let username = std::env::var("BLUESKY_HANDLE").context("BLUESKY_HANDLE not set")?;
-    // let password = std::env::var("BLUESKY_PASSWORD").context("BLUESKY_PASSWORD not set")?;
     let client = StratosphereApp::login(username.clone(), password).await?;
-
     println!("Logged in as {}", username);
-
-    let profile = client.get_profile(username).await?;
-
-    println!("{:?}", profile);
 
     Ok(client)
 }
@@ -92,6 +85,7 @@ fn App(cx: Scope) -> Element {
         })
     };
 
+    #[allow(unused_variables)]
     cx.render(rsx! {
         div {
             if let Some(client) = client.get() {
