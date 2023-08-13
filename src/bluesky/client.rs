@@ -2,6 +2,7 @@ use super::command::*;
 use super::session::StratosphereSession;
 use anyhow::Result;
 use async_trait::async_trait;
+use atrium_api::app::bsky::feed::defs::FeedViewPost;
 use atrium_api::com::atproto::server::create_session::Input as CreateSessionInput;
 use atrium_api::records::Record;
 use atrium_api::{
@@ -9,6 +10,7 @@ use atrium_api::{
 };
 use atrium_xrpc::client::reqwest::ReqwestClient;
 use chrono::Utc;
+use reqwest::Client;
 use std::sync::{Arc, Mutex};
 
 struct StratosphereXrpc {
@@ -21,9 +23,10 @@ pub struct StratosphereApp {
     xrpc: Arc<StratosphereXrpc>,
 }
 
-#[derive(Debug)]
-struct CreateRecordPostArgs {
-    text: String,
+pub enum ClientResponse {
+    Success,
+    Timeline(atrium_api::app::bsky::feed::get_timeline::Output),
+    Panic,
 }
 
 impl StratosphereApp {
@@ -68,7 +71,7 @@ impl StratosphereApp {
         Ok(())
     }
 
-    pub async fn handle_command(&self, command: Command) -> Result<()> {
+    pub async fn handle_command(&self, command: Command) -> Result<ClientResponse> {
         match command {
             Command::CreateRecord(record) => {
                 use atrium_api::com::atproto::repo::create_record::Input;
@@ -103,12 +106,35 @@ impl StratosphereApp {
 
                 let record = self.client.com.atproto.repo.create_record(input).await?;
                 println!("Record: {:?}", record);
+
+                Ok(ClientResponse::Success)
             }
 
-            _ => {}
-        }
+            Command::GetTimeline => {
+                use atrium_api::app::bsky::feed::get_timeline::Parameters as GetTimelineParams;
 
-        Ok(())
+                let timeline = self
+                    .client
+                    .app
+                    .bsky
+                    .feed
+                    .get_timeline(GetTimelineParams {
+                        algorithm: None,
+                        cursor: None,
+                        limit: Some(10),
+                    })
+                    .await;
+
+                println!("Timeline: {:?}", timeline);
+
+                Ok(ClientResponse::Timeline(timeline.unwrap()))
+            }
+
+            _ => {
+                println!("Command not implemented");
+                return Err(anyhow::Error::msg("Command not implemented"));
+            }
+        }
     }
 
     // pub async fn submit_post(&self, args: CreateRecordPostArgs) -> Result<()> {}

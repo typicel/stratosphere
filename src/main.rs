@@ -2,8 +2,9 @@
 
 mod bluesky;
 
-use crate::bluesky::{Command, CreateRecordCommand, CreateRecordPostArgs};
+use crate::bluesky::{ClientResponse, Command, CreateRecordCommand, CreateRecordPostArgs};
 use anyhow::Result;
+use atrium_api::app::bsky::feed::defs::FeedViewPost;
 use bluesky::StratosphereApp;
 
 use dioxus::prelude::*;
@@ -25,6 +26,8 @@ fn App(cx: Scope) -> Element {
     let username_input = use_state(cx, || "".to_string());
     let password_input = use_state(cx, || "".to_string());
     let client = use_state(cx, || Option::<StratosphereApp>::None);
+
+    let timeline = use_state(cx, || Option::<Vec<FeedViewPost>>::None);
 
     let post_input = use_state(cx, || "".to_string());
 
@@ -53,6 +56,37 @@ fn App(cx: Scope) -> Element {
                 }
             }
         });
+    };
+
+    let load_timeline = move |_| {
+        cx.spawn({
+            let client = client.to_owned();
+            let timeline = timeline.to_owned();
+
+            async move {
+                if let Some(_client) = client.get() {
+                    let resp = _client.handle_command(Command::GetTimeline).await;
+
+                    match resp {
+                        Ok(output) => match output {
+                            ClientResponse::Timeline(output) => {
+                                timeline.set(Some(output.feed));
+                                ()
+                            }
+                            _ => {
+                                log::error!("Failed to load timeline");
+                                ()
+                            }
+                        },
+
+                        Err(_err) => {
+                            log::error!("Failed to load timeline: {:?}", _err);
+                            ()
+                        }
+                    }
+                }
+            }
+        })
     };
 
     let submit_post = move |_| {
@@ -89,7 +123,7 @@ fn App(cx: Scope) -> Element {
     cx.render(rsx! {
         div {
             if let Some(client) = client.get() {
-                rsx!(
+                rsx! {
                     form {
                         onsubmit: submit_post,
                         input {
@@ -100,9 +134,24 @@ fn App(cx: Scope) -> Element {
                             r#type: "submit",
                         }
                     }
-                )
+
+                    button {
+                        onclick: load_timeline,
+                        "Load timeline"
+                    }
+
+                    if let Some(_timeline) = timeline.get() {
+                        rsx! (
+                            TimelineView {
+                                timeline: _timeline.clone(),
+                            }
+                        )
+                    }
+
+                }
             } else {
-                rsx!(
+
+                rsx!{
                     h1{ "Login to Bluesky" }
                     form {
                         onsubmit: handle_login,
@@ -118,8 +167,58 @@ fn App(cx: Scope) -> Element {
                             r#type: "submit",
                         }
                     }
-                )
+                }
             }
         }
     })
+}
+
+#[derive(Props, PartialEq)]
+struct TimelineViewProps {
+    timeline: Vec<FeedViewPost>,
+}
+
+fn TimelineView(cx: Scope<TimelineViewProps>) -> Element {
+    // let post_views = cx.props.timeline.iter().map(|post| post.post.clone());
+
+    render! {
+        h1 { "Timeline" }
+
+        ul {
+            for post in cx.props.timeline.clone() {
+                render! {
+                    PostView {
+                        post: post
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[derive(Props, PartialEq)]
+struct PostViewProps {
+    post: FeedViewPost,
+}
+fn PostView(cx: Scope<PostViewProps>) -> Element {
+    use atrium_api::records::Record;
+    let post_view = cx.props.post.post.clone();
+
+    render! {
+        match post_view.record {
+            Record::AppBskyFeedPost(post_record) => {
+                rsx! {
+                    li {
+                        p { "{post_record.text}" }
+                    }
+                }
+            }
+
+            _ => {
+                rsx! {
+                    li { "Unknown post type" }
+                }
+            }
+        }
+    }
 }
