@@ -10,12 +10,20 @@ anyhow = "1.0.72"
 async-trait = "0.1.68"
 atrium-api = "0.4.0"
 atrium-xrpc = "0.3.0"
+axum = "0.6.20"
 chrono = "0.4.26"
 dioxus = "0.4.0"
 dioxus-desktop = "0.4.0"
+dioxus-fullstack = {version = "0.4.1", features = ["axum"]}
+dioxus-hot-reload = "0.4.0"
 http = "0.2.9"
 jwt = "0.16.0"
 log = "0.4.19"
 reqwest = "0.11.18"
 serde = "1.0.183"
-tokio = {version = "1.28.2", features = ["macros", "rt", "rt-multi-thread"]}
+tokio = {version = "1.28.2", features = ["macros", "rt", "rt-multi-thread", "full"]}
+
+# [features]
+# default = []
+# ssr = ["dioxus-fullstack/axum"]
+# web = ["dioxus-fullstack/web"]

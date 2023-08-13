@@ -1,6 +1,7 @@
-#![allow(non_snake_case)]
+#![allow(non_snake_case, unused)]
 
 mod bluesky;
+mod components;
 
 use crate::bluesky::{ClientResponse, Command, CreateRecordCommand, CreateRecordPostArgs};
 use anyhow::Result;
@@ -8,9 +9,14 @@ use atrium_api::app::bsky::feed::defs::FeedViewPost;
 use bluesky::StratosphereApp;
 
 use dioxus::prelude::*;
+use dioxus_hot_reload::*;
+
+use components::TimelineView::TimelineView;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // hot_reload_init!();
+
     dioxus_desktop::launch(App);
     Ok(())
 }
@@ -30,6 +36,26 @@ fn App(cx: Scope) -> Element {
     let timeline = use_state(cx, || Option::<Vec<FeedViewPost>>::None);
 
     let post_input = use_state(cx, || "".to_string());
+
+    let login_if_env = use_future(cx, (), |_| {
+        let username = std::env::var("BLUESKY_HANDLE");
+        let password = std::env::var("BLUESKY_PASSWORD");
+        let client = client.to_owned();
+
+        async move {
+            if let Ok(usr) = username {
+                if let Ok(pwd) = password {
+                    println!("user: {:?}, pass: {:?}", usr, pwd);
+                    let client_ = login_to_bluesky(usr, pwd).await.unwrap();
+                    client.set(Some(client_));
+                } else {
+                    println!("Failed to get password from env");
+                }
+            } else {
+                println!("Failed to get username from env");
+            }
+        }
+    });
 
     let handle_login = move |_| {
         cx.spawn({
@@ -171,54 +197,4 @@ fn App(cx: Scope) -> Element {
             }
         }
     })
-}
-
-#[derive(Props, PartialEq)]
-struct TimelineViewProps {
-    timeline: Vec<FeedViewPost>,
-}
-
-fn TimelineView(cx: Scope<TimelineViewProps>) -> Element {
-    // let post_views = cx.props.timeline.iter().map(|post| post.post.clone());
-
-    render! {
-        h1 { "Timeline" }
-
-        ul {
-            for post in cx.props.timeline.clone() {
-                render! {
-                    PostView {
-                        post: post
-                    }
-                }
-            }
-        }
-    }
-}
-
-#[derive(Props, PartialEq)]
-struct PostViewProps {
-    post: FeedViewPost,
-}
-fn PostView(cx: Scope<PostViewProps>) -> Element {
-    use atrium_api::records::Record;
-    let post_view = cx.props.post.post.clone();
-
-    render! {
-        match post_view.record {
-            Record::AppBskyFeedPost(post_record) => {
-                rsx! {
-                    li {
-                        p { "{post_record.text}" }
-                    }
-                }
-            }
-
-            _ => {
-                rsx! {
-                    li { "Unknown post type" }
-                }
-            }
-        }
-    }
 }
