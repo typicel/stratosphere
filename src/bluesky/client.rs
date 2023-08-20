@@ -1,8 +1,10 @@
 use super::command::*;
+use super::record::*;
 use super::session::StratosphereSession;
 use anyhow::Result;
 use async_trait::async_trait;
 use atrium_api::app::bsky::feed::defs::FeedViewPost;
+use atrium_api::com::atproto::admin::get_record::Parameters;
 use atrium_api::com::atproto::server::create_session::Input as CreateSessionInput;
 use atrium_api::records::Record;
 use atrium_api::{
@@ -102,6 +104,31 @@ impl StratosphereApp {
                             validate: None,
                         }
                     }
+                    CreateRecordCommand::Like(args) => {
+                        use atrium_api::app::bsky::feed::like::Record as LikeRecord;
+                        // let ru = RecordUri::try_from(args.uri.as_str())?;
+
+                        // call the get_record method from AtpServiceClient
+                        let record = self.client.com.atproto.admin.get_record(Parameters {
+                            cid: None,
+                            uri: args.uri.clone(),
+                        }).await;
+
+                        Input {
+                            collection: String::from("app.bsky.feed.like"),
+                            record: Record::AppBskyFeedLike(Box::new(LikeRecord {
+                                created_at: Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string(),
+                                subject: atrium_api::com::atproto::repo::strong_ref::Main {
+                                    cid: record.unwrap().cid,
+                                    uri: args.uri,
+                                },
+                            })),
+                            repo: self.xrpc.session.lock().unwrap().did.clone(),
+                            rkey: None,
+                            swap_commit: None,
+                            validate: None,
+                        }
+                    }
                 };
 
                 let record = self.client.com.atproto.repo.create_record(input).await?;
@@ -125,8 +152,6 @@ impl StratosphereApp {
                     })
                     .await;
 
-                println!("Timeline: {:?}", timeline);
-
                 Ok(ClientResponse::Timeline(timeline.unwrap()))
             }
 
@@ -136,8 +161,6 @@ impl StratosphereApp {
             }
         }
     }
-
-    // pub async fn submit_post(&self, args: CreateRecordPostArgs) -> Result<()> {}
 }
 
 #[async_trait]

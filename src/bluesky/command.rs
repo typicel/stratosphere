@@ -8,10 +8,15 @@ pub struct CreateRecordPostArgs {
 }
 
 #[derive(Debug)]
+pub struct CreateRecordLikeArgs {
+    pub uri: String,
+}
+
+#[derive(Debug)]
 pub enum CreateRecordCommand {
     Post(CreateRecordPostArgs),
     // Repost(CreateRecordRepostArgs),
-    // Like(CreateRecordLikeArgs),
+    Like(CreateRecordLikeArgs),
     // Block(CreateRecordBlockArgs),
 }
 

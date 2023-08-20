@@ -37,6 +37,37 @@ fn App(cx: Scope) -> Element {
 
     let post_input = use_state(cx, || "".to_string());
 
+    let load_timeline = move |_| {
+        cx.spawn({
+            let client = client.to_owned();
+            let timeline = timeline.to_owned();
+
+            async move {
+                if let Some(_client) = client.get() {
+                    let resp = _client.handle_command(Command::GetTimeline).await;
+
+                    match resp {
+                        Ok(output) => match output {
+                            ClientResponse::Timeline(output) => {
+                                timeline.set(Some(output.feed));
+                                ()
+                            }
+                            _ => {
+                                log::error!("Failed to load timeline");
+                                ()
+                            }
+                        },
+
+                        Err(_err) => {
+                            log::error!("Failed to load timeline: {:?}", _err);
+                            ()
+                        }
+                    }
+                }
+            }
+        })
+    };
+
     let login_if_env = use_future(cx, (), |_| {
         let username = std::env::var("BLUESKY_HANDLE");
         let password = std::env::var("BLUESKY_PASSWORD");
@@ -82,37 +113,6 @@ fn App(cx: Scope) -> Element {
                 }
             }
         });
-    };
-
-    let load_timeline = move |_| {
-        cx.spawn({
-            let client = client.to_owned();
-            let timeline = timeline.to_owned();
-
-            async move {
-                if let Some(_client) = client.get() {
-                    let resp = _client.handle_command(Command::GetTimeline).await;
-
-                    match resp {
-                        Ok(output) => match output {
-                            ClientResponse::Timeline(output) => {
-                                timeline.set(Some(output.feed));
-                                ()
-                            }
-                            _ => {
-                                log::error!("Failed to load timeline");
-                                ()
-                            }
-                        },
-
-                        Err(_err) => {
-                            log::error!("Failed to load timeline: {:?}", _err);
-                            ()
-                        }
-                    }
-                }
-            }
-        })
     };
 
     let submit_post = move |_| {
